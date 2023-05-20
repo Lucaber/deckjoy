@@ -1,0 +1,39 @@
+syntax = "proto3";
+option go_package = "github.com/lucaber/deckjoy/pkg/ipc";
+
+package deckjoy;
+
+service DeckJoyDaemon {
+  rpc Stop (Empty) returns (Empty) {}
+  rpc Init (Empty) returns (Empty) {}
+  rpc SetupJoystick (SetupJoystickRequest) returns (SetupJoystickResponse) {}
+  rpc SetupKeyboard (SetupKeyboardRequest) returns (SetupKeyboardResponse) {}
+  rpc SetupMouse (SetupMouseRequest) returns (SetupMouseResponse) {}
+}
+
+message Empty {
+}
+
+message SetupJoystickRequest {
+  bool userPermissions = 1;
+}
+
+message SetupJoystickResponse {
+  string path = 1;
+}
+
+message SetupKeyboardRequest {
+  bool userPermissions = 1;
+}
+
+message SetupKeyboardResponse {
+  string path = 1;
+}
+
+message SetupMouseRequest {
+  bool userPermissions = 1;
+}
+
+message SetupMouseResponse {
+  string path = 1;
+}
