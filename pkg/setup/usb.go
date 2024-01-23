@@ -135,6 +135,9 @@ func (d *Deck) SetupHidDevice(name string, reportDesc []byte, userPermissions bo
 		return "", err
 	}
 
+	// disable first, before adding new function to the config
+	_ = d.gadget.Disable()
+
 	err = d.conf.AddFunction(hid.FunctionGeneric)
 	if err != nil {
 		return "", err
