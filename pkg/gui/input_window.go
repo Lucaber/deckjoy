@@ -7,6 +7,7 @@ import (
 	"github.com/lucaber/deckjoy/pkg/service"
 	"github.com/lucaber/deckjoy/pkg/steamworks"
 	log "github.com/sirupsen/logrus"
+	"runtime"
 	"sync"
 )
 import "github.com/veandco/go-sdl2/sdl"
@@ -36,10 +37,12 @@ func NewInputWindow(deck *service.Deck) *InputWindow {
 }
 
 func (iw *InputWindow) Run() error {
+	runtime.LockOSThread()
 	go iw.runPendingEventsHandler()
 
 	var err error
 	sdl.Main(func() {
+		runtime.LockOSThread()
 		err = iw.runGui()
 	})
 	return err
@@ -110,6 +113,9 @@ func (iw *InputWindow) runGui() error {
 		err = iw.loop()
 		if errors.Is(err, QuitErr) {
 			break
+		}
+		if err != nil {
+			return err
 		}
 	}
 

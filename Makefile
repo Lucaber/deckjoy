@@ -30,7 +30,7 @@ upload:
 
 .PHONY: run-remote-steam
 run-remote-steam:
-	ssh $(REMOTE_TARGET) steam steam://rungameid/15557043747182084096
+	ssh $(REMOTE_TARGET) steam steam://rungameid/11433172314573766656 # get id by creating a desktop shortcut
 
 .PHONY: run-remote
 run-remote:

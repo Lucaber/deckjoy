@@ -6,9 +6,11 @@ import (
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
+	"runtime"
 )
 
 func main() {
+	runtime.LockOSThread()
 	app := &cli.App{
 		Commands: []*cli.Command{
 			{
