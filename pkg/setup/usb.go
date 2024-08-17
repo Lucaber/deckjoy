@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"os"
 	"path"
+	"time"
 )
 
 type AfterEnableHookFunc func() error
@@ -42,6 +43,8 @@ func (d *Deck) SetupDeviceModules() error {
 	if err != nil {
 		return errors.Wrap(err, "failed to bind device")
 	}
+	// wait for module bind
+	time.Sleep(time.Second)
 
 	return nil
 }
