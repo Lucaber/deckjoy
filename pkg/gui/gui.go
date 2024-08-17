@@ -11,7 +11,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"github.com/lucaber/deckjoy/pkg/config"
 	"github.com/lucaber/deckjoy/pkg/service"
-	"github.com/lucaber/deckjoy/pkg/usbgadget"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/image/colornames"
 	"time"
@@ -53,12 +52,6 @@ func (g *GUI) Run() {
 		}()
 	})
 	startInputWindowButton.Disable()
-
-	// todo: sometimes not working, maybe before libcomposite is loaded?
-	if hasDevice, err := usbgadget.HasDevice(); err != nil || !hasDevice {
-		startUSBButton.Disable()
-		startUSBButton.SetText("No USB port in DRD mode found")
-	}
 
 	go func() {
 		// wait for daemon to start

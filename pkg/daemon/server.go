@@ -4,6 +4,7 @@ import (
 	context "context"
 	"github.com/lucaber/deckjoy/pkg/ipc"
 	"github.com/lucaber/deckjoy/pkg/setup"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,6 +42,11 @@ func (s *Server) Init(ctx context.Context, request *ipc.Empty) (*ipc.Empty, erro
 	err = s.deck.SetupModules()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not setup kernel modules: %s", err.Error())
+	}
+
+	err = s.deck.SetupDeviceModules()
+	if err != nil {
+		log.WithError(err).Info("could not setup modules for usb device")
 	}
 
 	err = s.deck.SetupGadget()

@@ -5,6 +5,7 @@ go 1.20
 require (
 	fyne.io/fyne/v2 v2.3.4
 	github.com/ebitengine/purego v0.3.2
+	github.com/pkg/errors v0.8.1
 	github.com/sirupsen/logrus v1.9.0
 	github.com/urfave/cli/v2 v2.25.1
 	github.com/veandco/go-sdl2 v0.4.35

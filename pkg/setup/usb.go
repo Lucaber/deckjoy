@@ -5,6 +5,9 @@ import (
 	"github.com/lucaber/deckjoy/pkg/deck"
 	"github.com/lucaber/deckjoy/pkg/hid"
 	"github.com/lucaber/deckjoy/pkg/usbgadget"
+	"github.com/pkg/errors"
+	"os"
+	"path"
 )
 
 type AfterEnableHookFunc func() error
@@ -23,6 +26,24 @@ func NewDeck() (*Deck, error) {
 
 func (d *Deck) SetupModules() error {
 	return Modprobe("libcomposite")
+}
+
+// sometimes the usb controller gets detected with a wrong class and the wrong module get loaded for the device
+// - pci 0000:04:00.3: [1022:163a] type 00 class 0x0c0330
+// + pci 0000:04:00.3: [1022:163a] type 00 class 0x0c03fe
+func (d *Deck) SetupDeviceModules() error {
+	// todo: remove hardcoded id
+	device := []byte("0000:04:00.3")
+	err := os.WriteFile(path.Join("/sys/bus/pci/drivers/xhci_hcd/unbind"), device, os.ModePerm)
+	if err != nil {
+		return errors.Wrap(err, "failed to unbind device")
+	}
+	err = os.WriteFile(path.Join("/sys/bus/pci/drivers/dwc3-pci/bind"), device, os.ModePerm)
+	if err != nil {
+		return errors.Wrap(err, "failed to bind device")
+	}
+
+	return nil
 }
 
 func (d *Deck) setupGadget() error {
