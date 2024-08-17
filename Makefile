@@ -10,7 +10,7 @@ daemon: build upload cleanup-remote daemon-remote
 
 .PHONY: build
 build:
-	go build -ldflags "-X 'github.com/lucaber/deckjoy/pkg/config.Version=0.0.2'" -o deckjoy main.go
+	go build -ldflags "-X 'github.com/lucaber/deckjoy/pkg/config.Version=0.0.3'" -o deckjoy main.go
 
 .PHONY: zip
 zip: build
