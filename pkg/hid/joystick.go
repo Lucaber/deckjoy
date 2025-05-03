@@ -46,6 +46,7 @@ var JoystickReportDesc = []byte{
 	// padding
 	0x75, 0x01, //   REPORT_SIZE (1)
 	0x95, 0x05, //   REPORT_COUNT (5)
+	0x09, 0x00, //   USAGE (Undefined)
 	0x81, 0x02, //   INPUT (Data,Var,Abs)
 
 	0xc0, // END_COLLECTION
