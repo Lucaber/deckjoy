@@ -34,19 +34,13 @@ var JoystickReportDesc = []byte{
 
 	0x05, 0x09, //   USAGE_PAGE (Button)
 	0x19, 0x01, //   USAGE_MINIMUM (Button 1)
-	0x29, 0x0b, //   USAGE_MAXIMUM (Button 11)
+	0x29, 0x10, //   USAGE_MAXIMUM (Button 16)
 	0x15, 0x00, //   LOGICAL_MINIMUM (0)
 	0x25, 0x01, //   LOGICAL_MAXIMUM (1)
 	0x75, 0x01, //   REPORT_SIZE (1)
-	0x95, 0x0b, //   REPORT_COUNT (11)
+	0x95, 0x10, //   REPORT_COUNT (16)
 	0x55, 0x00, //   UNIT_EXPONENT (0)
 	0x65, 0x00, //   UNIT (None)
-	0x81, 0x02, //   INPUT (Data,Var,Abs)
-
-	// padding
-	0x75, 0x01, //   REPORT_SIZE (1)
-	0x95, 0x05, //   REPORT_COUNT (5)
-	0x09, 0x00, //   USAGE (Undefined)
 	0x81, 0x02, //   INPUT (Data,Var,Abs)
 
 	0xc0, // END_COLLECTION
