@@ -1,10 +1,12 @@
 package main
 
 import (
+	"github.com/lucaber/deckjoy/pkg/bluetooth"
 	"github.com/lucaber/deckjoy/pkg/cmd"
-	"github.com/lucaber/deckjoy/pkg/setup"
+	"github.com/lucaber/deckjoy/pkg/hid"
+	"github.com/lucaber/deckjoy/pkg/usb"
 	"github.com/urfave/cli/v2"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"os"
 	"runtime"
 )
@@ -22,11 +24,11 @@ func main() {
 				Name:  "cleanup",
 				Usage: "remove usb gadget",
 				Action: func(*cli.Context) error {
-					deckSetup, err := setup.NewDeck()
+					deckUSB, err := usb.NewUSB()
 					if err != nil {
 						return err
 					}
-					err = deckSetup.Destroy()
+					err = deckUSB.Destroy()
 					if err != nil {
 						return err
 					}
@@ -37,6 +39,18 @@ func main() {
 				Name:   "gui",
 				Usage:  "show gui",
 				Action: cmd.RunGui,
+			},
+			{
+				Name:  "test",
+				Usage: "test",
+				Action: func(context *cli.Context) error {
+					log.SetLevel(log.DebugLevel)
+					err := bluetooth.NewBluetooth().Run(context.Context, bluetooth.SDPRecord{HIDDescriptor: hid.KeyboardReportDesc})
+					if err != nil {
+						return err
+					}
+					select {}
+				},
 			},
 		},
 		Action: cmd.RunGui,

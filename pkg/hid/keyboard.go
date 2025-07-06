@@ -36,7 +36,7 @@ var KeyboardReportDesc = []byte{
 }
 
 type Keyboard struct {
-	*Device
+	Device
 	modKeysPressed map[KeyboardModKey]any
 	keysPressed    map[KeyboardKey]any
 }
@@ -81,11 +81,9 @@ func (k *Keyboard) SendState() error {
 	return k.Write(state)
 }
 
-func NewKeyboard(path string) *Keyboard {
+func NewKeyboard(device Device) *Keyboard {
 	k := &Keyboard{
-		Device: &Device{
-			path: path,
-		},
+		Device:         device,
 		keysPressed:    map[KeyboardKey]any{},
 		modKeysPressed: map[KeyboardModKey]any{},
 	}

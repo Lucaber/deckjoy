@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/lucaber/deckjoy/pkg/gui"
 	"github.com/lucaber/deckjoy/pkg/service"
-	"github.com/lucaber/deckjoy/pkg/setup"
 	"github.com/lucaber/deckjoy/pkg/steamworks"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -15,7 +14,9 @@ import (
 
 func RunGui(c *cli.Context) error {
 
-	err := setup.Install()
+	log.SetLevel(log.DebugLevel)
+
+	err := steamworks.Install()
 	if err != nil {
 		log.WithError(err).Error("installation failed")
 	}

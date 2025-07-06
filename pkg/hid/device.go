@@ -5,13 +5,22 @@ import (
 	"os"
 )
 
-type Device struct {
-	path string
+type Device interface {
+	Open() error
+	Write(b []byte) error
+}
+
+type FileDevice struct {
+	Path string
 	file *os.File
 }
 
-func (d *Device) Open() error {
-	file, err := os.OpenFile(d.path, os.O_RDWR, os.ModeCharDevice)
+func NewFileDevice(path string) *FileDevice {
+	return &FileDevice{path, nil}
+}
+
+func (d *FileDevice) Open() error {
+	file, err := os.OpenFile(d.Path, os.O_RDWR, os.ModeCharDevice)
 	if err != nil {
 		return err
 	}
@@ -19,7 +28,7 @@ func (d *Device) Open() error {
 	return nil
 }
 
-func (d *Device) Write(b []byte) error {
+func (d *FileDevice) Write(b []byte) error {
 	if d.file == nil {
 		if err := d.Open(); err != nil {
 			return err
@@ -33,3 +42,20 @@ func (d *Device) Write(b []byte) error {
 	}
 	return nil
 }
+
+type NullDevice struct {
+}
+
+func (n NullDevice) Open() error {
+	return nil
+}
+
+func (n NullDevice) Write(b []byte) error {
+	return nil
+}
+
+func NewNullDevice() *NullDevice {
+	return &NullDevice{}
+}
+
+var _ Device = &NullDevice{}

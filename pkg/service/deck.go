@@ -3,12 +3,14 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
+
+	"github.com/lucaber/deckjoy/pkg/bluetooth"
 	"github.com/lucaber/deckjoy/pkg/daemon"
 	"github.com/lucaber/deckjoy/pkg/hid"
 	"github.com/lucaber/deckjoy/pkg/ipc"
 	"github.com/lucaber/deckjoy/pkg/joystick"
 	log "github.com/sirupsen/logrus"
-	"time"
 )
 
 const SocketPath = "/run/deckjoy.sock"
@@ -30,7 +32,7 @@ func NewDeck() *Deck {
 	return deck
 }
 
-func (d *Deck) Run(ctx context.Context) {
+func (d *Deck) RunUSB(ctx context.Context) {
 	for {
 		var err error
 		connectCtx, connectCtxCancel := context.WithTimeout(ctx, time.Second)
@@ -44,14 +46,19 @@ func (d *Deck) Run(ctx context.Context) {
 		break
 	}
 
-	_, err := d.Daemon.Init(ctx, &ipc.Empty{})
+	_, err := d.Daemon.InstallSudoers(ctx, &ipc.Empty{})
+	if err != nil {
+		log.WithError(err).Infof("failed to install sudoers")
+	}
+
+	_, err = d.Daemon.InitUSB(ctx, &ipc.Empty{})
 	if err != nil {
 		d.SetupErr = fmt.Errorf("usb init failed: %w", err)
 		log.WithError(err).Infof("usb init failed")
 		return
 	}
 
-	joystickRes, err := d.Daemon.SetupJoystick(ctx, &ipc.SetupJoystickRequest{
+	joystickRes, err := d.Daemon.SetupUSBJoystick(ctx, &ipc.SetupJoystickRequest{
 		UserPermissions: true,
 	})
 	if err != nil {
@@ -60,9 +67,9 @@ func (d *Deck) Run(ctx context.Context) {
 		return
 	}
 	log.Infof("created joystick at %s", joystickRes.Path)
-	d.Joystick = hid.NewJoystick(joystickRes.Path)
+	d.Joystick = hid.NewJoystick(hid.NewFileDevice(joystickRes.Path))
 
-	keyboardRes, err := d.Daemon.SetupKeyboard(ctx, &ipc.SetupKeyboardRequest{
+	keyboardRes, err := d.Daemon.SetupUSBKeyboard(ctx, &ipc.SetupKeyboardRequest{
 		UserPermissions: true,
 	})
 	if err != nil {
@@ -71,9 +78,9 @@ func (d *Deck) Run(ctx context.Context) {
 		return
 	}
 	log.Infof("created keyboard at %s", keyboardRes.Path)
-	d.Keyboard = hid.NewKeyboard(keyboardRes.Path)
+	d.Keyboard = hid.NewKeyboard(hid.NewFileDevice(keyboardRes.Path))
 
-	mouseRes, err := d.Daemon.SetupMouse(ctx, &ipc.SetupMouseRequest{
+	mouseRes, err := d.Daemon.SetupUSBMouse(ctx, &ipc.SetupMouseRequest{
 		UserPermissions: true,
 	})
 	if err != nil {
@@ -82,7 +89,41 @@ func (d *Deck) Run(ctx context.Context) {
 		return
 	}
 	log.Infof("created mouse at %s", mouseRes.Path)
-	d.Mouse = hid.NewMouse(mouseRes.Path)
+	d.Mouse = hid.NewMouse(hid.NewFileDevice(mouseRes.Path))
+
+	d.RunJoystick()
+}
+func (d *Deck) RunBluetooth(ctx context.Context) {
+	for {
+		var err error
+		connectCtx, connectCtxCancel := context.WithTimeout(ctx, time.Second)
+		d.Daemon, err = daemon.NewClient(connectCtx, SocketPath)
+		connectCtxCancel()
+		if err != nil {
+			log.WithError(err).Infof("failed to connect to daemon")
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		break
+	}
+
+	_, err := d.Daemon.InstallSudoers(ctx, &ipc.Empty{})
+	if err != nil {
+		log.WithError(err).Infof("failed to install sudoers")
+	}
+
+	_, err = d.Daemon.InitBluetooth(ctx, &ipc.Empty{})
+	if err != nil {
+		d.SetupErr = fmt.Errorf("bluetooth init failed: %w", err)
+		log.WithError(err).Infof("bluetooth init failed")
+		return
+	}
+
+	bd := bluetooth.NewBluetoothDevice(d.Daemon)
+	d.Joystick = hid.NewJoystick(hid.NewReportIDDevice(bd, 1))
+	//d.Joystick = hid.NewJoystick(hid.NewNullDevice())
+	d.Keyboard = hid.NewKeyboard(hid.NewReportIDDevice(bd, 2))
+	d.Mouse = hid.NewMouse(hid.NewReportIDDevice(bd, 3))
 
 	d.RunJoystick()
 }
@@ -109,9 +150,6 @@ func (d *Deck) StartDaemon(ctx context.Context) {
 		d.daemonStop = nil
 		log.Infof("daemon exited")
 	}()
-
-	// Run setup lifecycle in background
-	go d.Run(ctx)
 }
 
 func (d *Deck) Stop() {

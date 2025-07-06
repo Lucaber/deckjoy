@@ -1,8 +1,8 @@
-package setup
+package usb
 
 import (
 	"fmt"
-	"github.com/lucaber/deckjoy/pkg/deck"
+	"github.com/lucaber/deckjoy/pkg/config"
 	"github.com/lucaber/deckjoy/pkg/hid"
 	"github.com/lucaber/deckjoy/pkg/usbgadget"
 	"github.com/pkg/errors"
@@ -13,26 +13,26 @@ import (
 
 type AfterEnableHookFunc func() error
 
-type Deck struct {
+type USB struct {
 	gadget           *usbgadget.Gadget
 	conf             *usbgadget.Config
 	afterEnableHooks map[string]AfterEnableHookFunc
 }
 
-func NewDeck() (*Deck, error) {
-	return &Deck{
+func NewUSB() (*USB, error) {
+	return &USB{
 		afterEnableHooks: map[string]AfterEnableHookFunc{},
 	}, nil
 }
 
-func (d *Deck) SetupModules() error {
+func (d *USB) SetupModules() error {
 	return Modprobe("libcomposite")
 }
 
 // sometimes the usb controller gets detected with a wrong class and the wrong module get loaded for the device
 // - pci 0000:04:00.3: [1022:163a] type 00 class 0x0c0330
 // + pci 0000:04:00.3: [1022:163a] type 00 class 0x0c03fe
-func (d *Deck) SetupDeviceModules() error {
+func (d *USB) SetupDeviceModules() error {
 	// todo: remove hardcoded id
 	device := []byte("0000:04:00.3")
 	err := os.WriteFile(path.Join("/sys/bus/pci/drivers/xhci_hcd/unbind"), device, os.ModePerm)
@@ -49,7 +49,7 @@ func (d *Deck) SetupDeviceModules() error {
 	return nil
 }
 
-func (d *Deck) setupGadget() error {
+func (d *USB) setupGadget() error {
 	gadget, err := usbgadget.CreateGadget("/sys/kernel/config/", "g.1")
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func (d *Deck) setupGadget() error {
 	return nil
 }
 
-func (d *Deck) SetupGadget() error {
+func (d *USB) SetupGadget() error {
 	err := d.setupGadget()
 	if err != nil {
 		return err
@@ -71,7 +71,7 @@ func (d *Deck) SetupGadget() error {
 		BCDUSB:    0x0200,
 	})
 
-	serial, err := deck.SerialNumber()
+	serial, err := config.SerialNumber()
 	if err != nil || serial == "" {
 		serial = "1"
 	}
@@ -106,7 +106,7 @@ func (d *Deck) SetupGadget() error {
 	return nil
 }
 
-func (d *Deck) enable() error {
+func (d *USB) enable() error {
 	if d.gadget == nil {
 		return fmt.Errorf("gadget not setup")
 	}
@@ -127,19 +127,19 @@ func (d *Deck) enable() error {
 	return nil
 }
 
-func (d *Deck) SetupJoystick(userPermissions bool) (string, error) {
+func (d *USB) SetupJoystick(userPermissions bool) (string, error) {
 	return d.SetupHidDevice("hid.joystick", hid.JoystickReportDesc, userPermissions)
 }
 
-func (d *Deck) SetupKeyboard(userPermissions bool) (string, error) {
+func (d *USB) SetupKeyboard(userPermissions bool) (string, error) {
 	return d.SetupHidDevice("hid.keyboard", hid.KeyboardReportDesc, userPermissions)
 }
 
-func (d *Deck) SetupMouse(userPermissions bool) (string, error) {
+func (d *USB) SetupMouse(userPermissions bool) (string, error) {
 	return d.SetupHidDevice("hid.mouse", hid.MouseReportDesc, userPermissions)
 }
 
-func (d *Deck) SetupHidDevice(name string, reportDesc []byte, userPermissions bool) (string, error) {
+func (d *USB) SetupHidDevice(name string, reportDesc []byte, userPermissions bool) (string, error) {
 	if d.conf == nil {
 		return "", fmt.Errorf("gadget not setup")
 	}
@@ -190,7 +190,7 @@ func (d *Deck) SetupHidDevice(name string, reportDesc []byte, userPermissions bo
 	return path, nil
 }
 
-func (d *Deck) Destroy() error {
+func (d *USB) Destroy() error {
 	if d.gadget == nil {
 		err := d.setupGadget()
 		if err != nil {
