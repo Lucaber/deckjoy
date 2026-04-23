@@ -24,6 +24,8 @@ type GUI struct {
 	app         fyne.App
 	window      fyne.Window
 	inputWindow *InputWindow
+	mainUI      fyne.CanvasObject
+	blackUI     fyne.CanvasObject
 }
 
 func NewGUI(deck *service.Deck) *GUI {
@@ -36,6 +38,8 @@ func (g *GUI) Run() {
 	g.app = app.New()
 	g.window = g.app.NewWindow("DeckJoy")
 	g.window.SetFullScreen(true)
+	g.mainUI = g.buildMainUI()
+	g.blackUI = g.buildBlackScreenUI()
 
 	g.setBlackScreen(false)
 	g.window.ShowAndRun()
@@ -44,10 +48,16 @@ func (g *GUI) Run() {
 func (g *GUI) setBlackScreen(on bool) {
 	g.window.SetPadded(!on)
 	if on {
-		g.window.SetContent(g.buildBlackScreenUI())
+		if g.blackUI == nil {
+			g.blackUI = g.buildBlackScreenUI()
+		}
+		g.window.SetContent(g.blackUI)
 		return
 	}
-	g.window.SetContent(g.buildMainUI())
+	if g.mainUI == nil {
+		g.mainUI = g.buildMainUI()
+	}
+	g.window.SetContent(g.mainUI)
 }
 
 func (g *GUI) buildMainUI() fyne.CanvasObject {
