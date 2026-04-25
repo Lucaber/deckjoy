@@ -36,9 +36,7 @@ func (g *GUI) Run() {
 	g.window.SetFullScreen(true)
 
 	errLabel := widget.NewLabel("")
-	startUSBButton := widget.NewButton("Start USB", func() {
-		g.deck.StartDaemon(context.Background())
-	})
+	errLabel.Wrapping = fyne.TextWrapWord
 	startInputWindowButton := widget.NewButton("Show Mouse/Keyboard", func() {
 		g.showInputWindow(false)
 	})
@@ -48,21 +46,29 @@ func (g *GUI) Run() {
 	startInputWindowButton.Disable()
 	startBlackScreenButton.Disable()
 
-	go func() {
-		// wait for daemon to start
-		for {
-			time.Sleep(100 * time.Millisecond)
-			if g.deck.Mouse != nil {
-				break
-			}
-			if g.deck.SetupErr != nil {
-				errLabel.SetText(g.deck.SetupErr.Error())
-			}
-		}
+	var startUSBButton *widget.Button
+	startUSBButton = widget.NewButton("Start USB", func() {
 		startUSBButton.Disable()
-		startInputWindowButton.Enable()
-		startBlackScreenButton.Enable()
-	}()
+		errLabel.SetText("")
+
+		g.deck.StartDaemon(context.Background())
+
+		go func() {
+			for {
+				time.Sleep(100 * time.Millisecond)
+				if g.deck.Mouse != nil {
+					startInputWindowButton.Enable()
+					startBlackScreenButton.Enable()
+					return
+				}
+				if g.deck.SetupErr != nil {
+					errLabel.SetText(g.deck.SetupErr.Error())
+					startUSBButton.Enable()
+					return
+				}
+			}
+		}()
+	})
 
 	versionText := canvas.NewText(fmt.Sprintf("%s", config.Version), colornames.Gray)
 	versionText.TextSize = 8

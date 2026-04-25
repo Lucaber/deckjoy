@@ -29,7 +29,6 @@ func RunGui(c *cli.Context) error {
 	}
 
 	deck := service.NewDeck()
-	go deck.Run(c.Context)
 
 	stopOnce := &sync.Once{}
 	stopFunc := func() {

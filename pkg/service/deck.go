@@ -88,6 +88,17 @@ func (d *Deck) Run(ctx context.Context) {
 }
 
 func (d *Deck) StartDaemon(ctx context.Context) {
+	// Reset state from previous attempt
+	d.SetupErr = nil
+	d.Mouse = nil
+	d.Keyboard = nil
+	d.Joystick = nil
+	d.Daemon = nil
+
+	// Stop any existing daemon
+	d.StopDaemon()
+
+	// Start new daemon process
 	daemonCtx, cancel := context.WithCancel(ctx)
 	d.daemonStop = cancel
 	errors := daemon.RunDaemonProcess(daemonCtx)
@@ -98,6 +109,9 @@ func (d *Deck) StartDaemon(ctx context.Context) {
 		d.daemonStop = nil
 		log.Infof("daemon exited")
 	}()
+
+	// Run setup lifecycle in background
+	go d.Run(ctx)
 }
 
 func (d *Deck) Stop() {
