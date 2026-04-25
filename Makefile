@@ -1,6 +1,6 @@
 
-REMOTE_TARGET := deck@192.168.1.156
-REMOTE_TARGET_ROOT := root@192.168.1.156
+REMOTE_TARGET := deck@192.168.100.102
+REMOTE_TARGET_ROOT := root@192.168.100.102
 
 .PHONY: all
 all: zip upload cleanup-remote run-remote-steam
