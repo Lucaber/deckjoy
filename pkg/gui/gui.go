@@ -3,6 +3,8 @@ package gui
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
@@ -13,7 +15,6 @@ import (
 	"github.com/lucaber/deckjoy/pkg/service"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/image/colornames"
-	"time"
 )
 
 type GUI struct {
@@ -39,19 +40,13 @@ func (g *GUI) Run() {
 		g.deck.StartDaemon(context.Background())
 	})
 	startInputWindowButton := widget.NewButton("Show Mouse/Keyboard", func() {
-		go func() {
-			if g.inputWindow == nil {
-				g.inputWindow = NewInputWindow(g.deck)
-				err := g.inputWindow.Run()
-				if err != nil {
-					log.WithError(err).Errorf("input window crashed")
-				}
-			} else {
-				g.inputWindow.Show()
-			}
-		}()
+		g.showInputWindow(false)
+	})
+	startBlackScreenButton := widget.NewButton("Black Screen", func() {
+		g.showInputWindow(true)
 	})
 	startInputWindowButton.Disable()
+	startBlackScreenButton.Disable()
 
 	go func() {
 		// wait for daemon to start
@@ -66,6 +61,7 @@ func (g *GUI) Run() {
 		}
 		startUSBButton.Disable()
 		startInputWindowButton.Enable()
+		startBlackScreenButton.Enable()
 	}()
 
 	versionText := canvas.NewText(fmt.Sprintf("%s", config.Version), colornames.Gray)
@@ -75,6 +71,7 @@ func (g *GUI) Run() {
 		widget.NewLabel(fmt.Sprintf("DeckJoy")),
 		startUSBButton,
 		startInputWindowButton,
+		startBlackScreenButton,
 		errLabel,
 		layout.NewSpacer(),
 		container.NewHBox(
@@ -84,4 +81,20 @@ func (g *GUI) Run() {
 	))
 
 	g.window.ShowAndRun()
+}
+
+func (g *GUI) showInputWindow(blackScreen bool) {
+	go func() {
+		if g.inputWindow == nil {
+			g.inputWindow = NewInputWindow(g.deck)
+			g.inputWindow.blackScreen = blackScreen
+			err := g.inputWindow.Run()
+			if err != nil {
+				log.WithError(err).Errorf("input window crashed")
+			}
+		} else {
+			g.inputWindow.blackScreen = blackScreen
+			g.inputWindow.Show()
+		}
+	}()
 }
