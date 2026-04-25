@@ -1,15 +1,11 @@
 package gui
 
 import (
-	"bytes"
 	"fmt"
-	"github.com/veandco/go-sdl2/sdl"
-	"golang.org/x/image/bmp"
-	"golang.org/x/image/font"
-	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/math/fixed"
-	"image"
 	"image/color"
+
+	"github.com/veandco/go-sdl2/sdl"
+	"golang.org/x/image/math/fixed"
 )
 
 type KeyboardGUI struct {
@@ -74,30 +70,7 @@ func (kr *KeyboardGUI) PreRender(paddingX, paddingY int) error {
 			key.renderH = int32(kr.pixelPerUnit)
 
 			if key.Text != "" {
-				// rendering text without sdl_ttf or sdl_image
-				// not installed on steam deck by default
-				img := image.NewRGBA(image.Rect(0, 0, int(key.renderW), int(key.renderH)))
-				location := fixed.Point26_6{fixed.I(20), fixed.I(30)}
-				d := &font.Drawer{
-					Dst:  img,
-					Src:  image.NewUniform(color.RGBA{200, 100, 0, 255}),
-					Face: basicfont.Face7x13,
-					Dot:  location,
-				}
-
-				d.DrawString(key.Text)
-
-				bmpBytes := bytes.Buffer{}
-				err := bmp.Encode(&bmpBytes, img)
-				if err != nil {
-					return err
-				}
-
-				rw, err := sdl.RWFromMem(bmpBytes.Bytes())
-				if err != nil {
-					return err
-				}
-				surface, err := sdl.LoadBMPRW(rw, true)
+				surface, err := renderTextSurface(key.Text, int(key.renderW), int(key.renderH), color.RGBA{200, 100, 0, 255}, fixed.Point26_6{X: fixed.I(20), Y: fixed.I(30)})
 				if err != nil {
 					return err
 				}

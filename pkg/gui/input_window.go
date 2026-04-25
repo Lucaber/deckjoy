@@ -3,14 +3,15 @@ package gui
 import (
 	"errors"
 	"fmt"
+	"runtime"
+	"sync"
+
 	"github.com/lucaber/deckjoy/pkg/hid"
 	"github.com/lucaber/deckjoy/pkg/service"
 	"github.com/lucaber/deckjoy/pkg/steamworks"
 	log "github.com/sirupsen/logrus"
-	"runtime"
-	"sync"
+	"github.com/veandco/go-sdl2/sdl"
 )
-import "github.com/veandco/go-sdl2/sdl"
 
 type InputWindow struct {
 	deck                    *service.Deck
@@ -22,6 +23,9 @@ type InputWindow struct {
 	// Unlock to trigger event handling
 	pendingEventsLoopLock *sync.Mutex
 	touches               map[sdl.FingerID]*Key
+	blackScreen           bool
+	blackScreenBtnRect    sdl.Rect
+	blackScreenBtnSurface *sdl.Surface
 }
 
 var QuitErr = fmt.Errorf("quit")
@@ -109,6 +113,10 @@ func (iw *InputWindow) runGui() error {
 		keyboard:     KeyboardAnsiTKL,
 	}
 
+	if err := iw.preRenderBlackScreenButton(); err != nil {
+		return err
+	}
+
 	for {
 		err = iw.loop()
 		if errors.Is(err, QuitErr) {
@@ -160,9 +168,16 @@ func (iw *InputWindow) loop() error {
 		return err
 	}
 
-	err = iw.keyboardGui.Render(10, 390)
-	if err != nil {
-		return err
+	if !iw.blackScreen {
+		err = iw.keyboardGui.Render(10, 390)
+		if err != nil {
+			return err
+		}
+
+		err = iw.renderBlackScreenButton()
+		if err != nil {
+			return err
+		}
 	}
 
 	sdl.Do(func() {
@@ -308,12 +323,24 @@ func (iw *InputWindow) handleMouseButtonEvent(t *sdl.MouseButtonEvent) error {
 	}
 	return nil
 }
+
 func (iw *InputWindow) handleTouchFingerEvent(t *sdl.TouchFingerEvent) error {
 	if iw.deck.Keyboard == nil {
 		return nil
 	}
 	if t.Type == sdl.FINGERDOWN {
+		if iw.blackScreen {
+			iw.blackScreen = false
+			return nil
+		}
+
 		x, y := iw.getTouchCords(t)
+
+		if rectContains(&iw.blackScreenBtnRect, x, y) {
+			iw.blackScreen = true
+			return nil
+		}
+
 		key, err := iw.keyboardGui.GetKeyAt(x, y)
 		if err != nil {
 			// not a key, ignore press
@@ -353,6 +380,10 @@ func (iw *InputWindow) handleTouchFingerEvent(t *sdl.TouchFingerEvent) error {
 		}
 	}
 	return nil
+}
+
+func rectContains(r *sdl.Rect, x, y int32) bool {
+	return x >= r.X && x <= r.X+r.W && y >= r.Y && y <= r.Y+r.H
 }
 
 func (iw *InputWindow) handleMouseMotionEvent(t *sdl.MouseMotionEvent) error {
