@@ -2,16 +2,17 @@ package daemon
 
 import (
 	context "context"
+	"net"
+	"os"
+	"syscall"
+	"time"
+
 	"github.com/lucaber/deckjoy/pkg/ipc"
 	"github.com/lucaber/deckjoy/pkg/setup"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"net"
-	"os"
-	"syscall"
-	"time"
 )
 
 type Server struct {
@@ -113,6 +114,12 @@ func NewServer(path string) *Server {
 }
 
 func (s *Server) Run() error {
+	// Daemon runs as root; install the polkit rule so future pkexec invocations
+	// don't prompt the user again.
+	if err := setup.InstallPolkitRuleAsRoot(); err != nil {
+		log.WithError(err).Warn("failed to install polkit rule")
+	}
+
 	l, err := net.Listen("unix", s.path)
 	defer func() {
 		_ = os.Remove(s.path)
