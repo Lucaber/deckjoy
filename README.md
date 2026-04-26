@@ -31,3 +31,7 @@ If Steam Input is not configured automatically I recommend to configure:
   - Default
     - Add Always-On Command
       - Command: System -> Touchscreen Native Support
+
+
+### Bluetooth
+Bluetooth support currently requires manual setup using bluetoothctl.

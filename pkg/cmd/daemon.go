@@ -11,6 +11,8 @@ import (
 )
 
 func RunDaemon(*cli.Context) error {
+	log.SetLevel(log.DebugLevel)
+
 	d := daemon.NewServer("/run/deckjoy.sock")
 
 	stopOnce := &sync.Once{}

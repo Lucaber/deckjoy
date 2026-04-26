@@ -12,7 +12,7 @@ import (
 )
 
 func RunSelfAsRoot(ctx context.Context, args ...string) error {
-	exePath, err := os.Readlink("/proc/self/exe")
+	exePath, err := os.Executable()
 	if err != nil {
 		return err
 	}

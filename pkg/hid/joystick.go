@@ -47,9 +47,10 @@ var JoystickReportDesc = []byte{
 }
 
 type Joystick struct {
-	*Device
+	Device
 	state     []byte
 	sendMutex *sync.Mutex
+	last      time.Time
 }
 
 func (j *Joystick) PressButton(num uint8) error {
@@ -86,20 +87,23 @@ func (j *Joystick) SetAxis(num uint8, value int16) error {
 func (j *Joystick) SendState() error {
 	j.sendMutex.Lock()
 	defer j.sendMutex.Unlock()
+	if time.Since(j.last) < 1*time.Millisecond {
+		return nil
+	}
 	err := j.Write(j.state)
+	j.last = time.Now()
 	if err != nil {
 		return fmt.Errorf("failed to set joystick state: %w", err)
 	}
 	return nil
 }
 
-func NewJoystick(path string) *Joystick {
+func NewJoystick(device Device) *Joystick {
 	j := &Joystick{
-		Device: &Device{
-			path: path,
-		},
+		Device:    device,
 		state:     make([]byte, 10),
 		sendMutex: &sync.Mutex{},
+		last:      time.Now(),
 	}
 
 	// set initial trigger states

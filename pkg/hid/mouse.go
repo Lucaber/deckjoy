@@ -32,7 +32,7 @@ var MouseReportDesc = []byte{
 }
 
 type Mouse struct {
-	*Device
+	Device
 	buttons byte
 }
 
@@ -64,11 +64,9 @@ func (k *Mouse) ReleaseButton(button MouseButton) error {
 	return k.Write([]byte{k.buttons, 0x00, 0x00, 0x00, 0x00})
 }
 
-func NewMouse(path string) *Mouse {
+func NewMouse(device Device) *Mouse {
 	k := &Mouse{
-		Device: &Device{
-			path: path,
-		},
+		Device:  device,
 		buttons: 0x00,
 	}
 	return k

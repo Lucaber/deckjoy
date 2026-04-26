@@ -20,9 +20,13 @@ func ExecAsRoot(ctx context.Context, args ...string) error {
 
 	time.Sleep(100 * time.Millisecond)
 
-	err := Exec(ctx, "pkexec", args...)
+	err := Exec(ctx, "sudo", args...)
 	if err != nil {
-		return err
+		log.Infof("failed to start daemon with sudo, using pkexec: %v", err)
+		err := Exec(ctx, "pkexec", args...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

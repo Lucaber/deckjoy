@@ -5,10 +5,13 @@ package deckjoy;
 
 service DeckJoyDaemon {
   rpc Stop (Empty) returns (Empty) {}
-  rpc Init (Empty) returns (Empty) {}
-  rpc SetupJoystick (SetupJoystickRequest) returns (SetupJoystickResponse) {}
-  rpc SetupKeyboard (SetupKeyboardRequest) returns (SetupKeyboardResponse) {}
-  rpc SetupMouse (SetupMouseRequest) returns (SetupMouseResponse) {}
+  rpc InitUSB (Empty) returns (Empty) {}
+  rpc SetupUSBJoystick (SetupJoystickRequest) returns (SetupJoystickResponse) {}
+  rpc SetupUSBKeyboard (SetupKeyboardRequest) returns (SetupKeyboardResponse) {}
+  rpc SetupUSBMouse (SetupMouseRequest) returns (SetupMouseResponse) {}
+  rpc InstallSudoers(Empty) returns (Empty) {}
+  rpc InitBluetooth (Empty) returns (Empty) {}
+  rpc WriteBluetoothHIDData (WriteBluetoothHIDDataRequest) returns (Empty) {}
 }
 
 message Empty {
@@ -36,4 +39,8 @@ message SetupMouseRequest {
 
 message SetupMouseResponse {
   string path = 1;
+}
+
+message WriteBluetoothHIDDataRequest {
+  bytes data = 1;
 }

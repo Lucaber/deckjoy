@@ -2,8 +2,10 @@ package daemon
 
 import (
 	context "context"
+	"github.com/lucaber/deckjoy/pkg/bluetooth"
+	"github.com/lucaber/deckjoy/pkg/hid"
 	"github.com/lucaber/deckjoy/pkg/ipc"
-	"github.com/lucaber/deckjoy/pkg/setup"
+	"github.com/lucaber/deckjoy/pkg/usb"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -15,9 +17,27 @@ import (
 )
 
 type Server struct {
-	path   string
-	server *grpc.Server
-	deck   *setup.Deck
+	ipc.UnimplementedDeckJoyDaemonServer
+	path      string
+	server    *grpc.Server
+	usb       *usb.USB
+	bluetooth *bluetooth.Bluetooth
+}
+
+func (s *Server) InstallSudoers(ctx context.Context, empty *ipc.Empty) (*ipc.Empty, error) {
+	filename := "/etc/sudoers.d/zzzdeckjoy"
+
+	exe, err := os.Executable()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get executable path: %v", err)
+	}
+
+	err = os.WriteFile(filename, []byte("deck ALL=(ALL) NOPASSWD: "+exe+" daemon"), 0440)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "install sudoers failed: %v", err)
+	}
+
+	return &ipc.Empty{}, nil
 }
 
 func (s *Server) Stop(ctx context.Context, empty *ipc.Empty) (*ipc.Empty, error) {
@@ -30,26 +50,26 @@ func (s *Server) Stop(ctx context.Context, empty *ipc.Empty) (*ipc.Empty, error)
 	return &ipc.Empty{}, nil
 }
 
-func (s *Server) Init(ctx context.Context, request *ipc.Empty) (*ipc.Empty, error) {
-	deck, err := setup.NewDeck()
+func (s *Server) InitUSB(ctx context.Context, request *ipc.Empty) (*ipc.Empty, error) {
+	usb, err := usb.NewUSB()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not setup deck: %s", err.Error())
 	}
-	s.deck = deck
+	s.usb = usb
 
-	_ = deck.Destroy()
+	_ = usb.Destroy()
 
-	err = s.deck.SetupModules()
+	err = s.usb.SetupModules()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not setup kernel modules: %s", err.Error())
 	}
 
-	err = s.deck.SetupDeviceModules()
+	err = s.usb.SetupDeviceModules()
 	if err != nil {
 		log.WithError(err).Info("could not setup modules for usb device")
 	}
 
-	err = s.deck.SetupGadget()
+	err = s.usb.SetupGadget()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "could not setup gadget: %s", err.Error())
 	}
@@ -57,11 +77,11 @@ func (s *Server) Init(ctx context.Context, request *ipc.Empty) (*ipc.Empty, erro
 	return &ipc.Empty{}, nil
 }
 
-func (s *Server) SetupJoystick(ctx context.Context, request *ipc.SetupJoystickRequest) (*ipc.SetupJoystickResponse, error) {
-	if s.deck == nil {
+func (s *Server) SetupUSBJoystick(ctx context.Context, request *ipc.SetupJoystickRequest) (*ipc.SetupJoystickResponse, error) {
+	if s.usb == nil {
 		return nil, status.Error(codes.Unavailable, "gadget not setup")
 	}
-	path, err := s.deck.SetupJoystick(request.UserPermissions)
+	path, err := s.usb.SetupJoystick(request.UserPermissions)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -71,11 +91,11 @@ func (s *Server) SetupJoystick(ctx context.Context, request *ipc.SetupJoystickRe
 	}, nil
 }
 
-func (s *Server) SetupKeyboard(ctx context.Context, request *ipc.SetupKeyboardRequest) (*ipc.SetupKeyboardResponse, error) {
-	if s.deck == nil {
+func (s *Server) SetupUSBKeyboard(ctx context.Context, request *ipc.SetupKeyboardRequest) (*ipc.SetupKeyboardResponse, error) {
+	if s.usb == nil {
 		return nil, status.Error(codes.Unavailable, "gadget not setup")
 	}
-	path, err := s.deck.SetupKeyboard(request.UserPermissions)
+	path, err := s.usb.SetupKeyboard(request.UserPermissions)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -85,11 +105,11 @@ func (s *Server) SetupKeyboard(ctx context.Context, request *ipc.SetupKeyboardRe
 	}, nil
 }
 
-func (s *Server) SetupMouse(ctx context.Context, request *ipc.SetupMouseRequest) (*ipc.SetupMouseResponse, error) {
-	if s.deck == nil {
+func (s *Server) SetupUSBMouse(ctx context.Context, request *ipc.SetupMouseRequest) (*ipc.SetupMouseResponse, error) {
+	if s.usb == nil {
 		return nil, status.Error(codes.Unavailable, "gadget not setup")
 	}
-	path, err := s.deck.SetupMouse(request.UserPermissions)
+	path, err := s.usb.SetupMouse(request.UserPermissions)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -97,6 +117,38 @@ func (s *Server) SetupMouse(ctx context.Context, request *ipc.SetupMouseRequest)
 	return &ipc.SetupMouseResponse{
 		Path: path,
 	}, nil
+}
+
+func (s *Server) InitBluetooth(ctx context.Context, request *ipc.Empty) (*ipc.Empty, error) {
+	if err := bluetooth.EnsureBluetoothdInputDisabled(); err != nil {
+		return nil, status.Errorf(codes.Internal, "could not configure bluetoothd: %v", err)
+	}
+
+	s.bluetooth = bluetooth.NewBluetooth()
+
+	descriptor := []byte{}
+	descriptor = append(descriptor, hid.AddReportID(hid.JoystickReportDesc, 1)...)
+	descriptor = append(descriptor, hid.AddReportID(hid.KeyboardReportDesc, 2)...)
+	descriptor = append(descriptor, hid.AddReportID(hid.MouseReportDesc, 3)...)
+
+	err := s.bluetooth.Run(ctx, bluetooth.SDPRecord{HIDDescriptor: descriptor})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not setup bluetooth: %v", err)
+	}
+
+	return &ipc.Empty{}, nil
+}
+
+func (s *Server) WriteBluetoothHIDData(ctx context.Context, request *ipc.WriteBluetoothHIDDataRequest) (*ipc.Empty, error) {
+	if s.bluetooth == nil {
+		return nil, status.Error(codes.Unavailable, "bluetooth not setup")
+	}
+	err := s.bluetooth.Write(request.Data)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "could not send bluetooth: %v", err)
+	}
+
+	return &ipc.Empty{}, nil
 }
 
 var _ ipc.DeckJoyDaemonServer = &Server{}
@@ -131,12 +183,12 @@ func (s *Server) Run() error {
 
 func (s *Server) Close() error {
 	s.server.Stop()
-	if s.deck != nil {
-		err := s.deck.Destroy()
+	if s.usb != nil {
+		err := s.usb.Destroy()
 		if err != nil {
 			return err
 		}
-		s.deck = nil
+		s.usb = nil
 	}
 	return nil
 }

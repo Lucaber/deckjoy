@@ -1,4 +1,4 @@
-package deck
+package config
 
 import "os"
 

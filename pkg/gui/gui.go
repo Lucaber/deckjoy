@@ -37,21 +37,24 @@ func (g *GUI) Run() {
 
 	errLabel := widget.NewLabel("")
 	errLabel.Wrapping = fyne.TextWrapWord
+
+	var startUSBButton *widget.Button
+	var startBluetoothButton *widget.Button
+
 	startInputWindowButton := widget.NewButton("Show Mouse/Keyboard", func() {
 		g.showInputWindow(false)
 	})
 	startBlackScreenButton := widget.NewButton("Black Screen", func() {
 		g.showInputWindow(true)
 	})
-	startInputWindowButton.Disable()
-	startBlackScreenButton.Disable()
 
-	var startUSBButton *widget.Button
 	startUSBButton = widget.NewButton("Start USB", func() {
 		startUSBButton.Disable()
+		startBluetoothButton.Disable()
 		errLabel.SetText("")
 
 		g.deck.StartDaemon(context.Background())
+		go g.deck.RunUSB(context.Background())
 
 		go func() {
 			for {
@@ -70,12 +73,41 @@ func (g *GUI) Run() {
 		}()
 	})
 
+	startBluetoothButton = widget.NewButton("Start Bluetooth (alpha, requires manual setup)", func() {
+		startUSBButton.Disable()
+		startBluetoothButton.Disable()
+		errLabel.SetText("")
+
+		g.deck.StartDaemon(context.Background())
+		go g.deck.RunBluetooth(context.Background())
+
+		go func() {
+			for {
+				time.Sleep(100 * time.Millisecond)
+				if g.deck.Mouse != nil {
+					startInputWindowButton.Enable()
+					startBlackScreenButton.Enable()
+					return
+				}
+				if g.deck.SetupErr != nil {
+					errLabel.SetText(g.deck.SetupErr.Error())
+					startBluetoothButton.Enable()
+					return
+				}
+			}
+		}()
+	})
+
+	startInputWindowButton.Disable()
+	startBlackScreenButton.Disable()
+
 	versionText := canvas.NewText(fmt.Sprintf("%s", config.Version), colornames.Gray)
 	versionText.TextSize = 8
 
 	g.window.SetContent(container.NewVBox(
 		widget.NewLabel(fmt.Sprintf("DeckJoy")),
 		startUSBButton,
+		startBluetoothButton,
 		startInputWindowButton,
 		startBlackScreenButton,
 		errLabel,
