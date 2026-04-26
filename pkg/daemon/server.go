@@ -120,6 +120,10 @@ func (s *Server) SetupUSBMouse(ctx context.Context, request *ipc.SetupMouseReque
 }
 
 func (s *Server) InitBluetooth(ctx context.Context, request *ipc.Empty) (*ipc.Empty, error) {
+	if err := bluetooth.EnsureBluetoothdInputDisabled(); err != nil {
+		return nil, status.Errorf(codes.Internal, "could not configure bluetoothd: %v", err)
+	}
+
 	s.bluetooth = bluetooth.NewBluetooth()
 
 	descriptor := []byte{}
