@@ -1,11 +1,11 @@
 package hid
 
 func AddReportID(descriptor []byte, id byte) []byte {
-	x := descriptor[:6]
-	x = append(x, 0x85)
-	x = append(x, id)
-	x = append(x, descriptor[6:]...)
-	return x
+	out := make([]byte, 0, len(descriptor)+2)
+	out = append(out, descriptor[:6]...)
+	out = append(out, 0x85, id)
+	out = append(out, descriptor[6:]...)
+	return out
 }
 
 type ReportIDDevice struct {
